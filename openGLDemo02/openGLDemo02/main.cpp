@@ -13,7 +13,8 @@
 #include <iostream>
 #include "training01.hpp"
 #include "Shader.hpp"
-#include <SOIL/SOIL.h>
+//#include <SOIL/SOIL.h>
+#include "SOIL.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -129,7 +130,7 @@ int useTexture() {
     glViewport(0, 0, width, height);
     
     //连接2个这色器
-    Shader ourShader("/Users/key/Documents/Code/OpenGL/openGLDemo02/openGLDemo02/vertexData/shaderTextrue.vs", "/Users/key/Documents/Code/OpenGL/openGLDemo02/openGLDemo02/vertexData/shaderTextrue.frag");
+    Shader ourShader("/Users/xizi/Documents/Code/OpenGL/openGLForMac/openGLDemo02/openGLDemo02/vertexData/shaderTextrue.vs", "/Users/xizi/Documents/Code/OpenGL/openGLForMac/openGLDemo02/openGLDemo02/vertexData/shaderTextrue.frag");
     
     
     //顶点数据
@@ -144,7 +145,7 @@ int useTexture() {
     //绘制矩形 需要2个三角形， 0 1 3 是一个   1 2 3 是一个
     GLuint indices[] = {  // Note that we start from 0!
         0, 1, 3, // First Triangle
-        1, 2, 3  // Second Triangle
+//        1, 2, 3  // Second Triangle
     };
     
     
@@ -224,7 +225,7 @@ int useTexture() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // Load, create texture and generate mipmaps
-    image = SOIL_load_image("/Users/key/Downloads/test.png", &imageWidth, &imageHeight, 0, SOIL_LOAD_RGB);
+    image = SOIL_load_image("/Users/xizi/Documents/Code/OpenGL/test.png", &imageWidth, &imageHeight, 0, SOIL_LOAD_RGB);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imageWidth, imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
     glGenerateMipmap(GL_TEXTURE_2D);
     SOIL_free_image_data(image);
@@ -288,7 +289,7 @@ int useTexture() {
         // Draw container
         glBindVertexArray(VAO);
         //画 的类型 6个点
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
         
         //解绑 VAO  数据
         glBindVertexArray(0);
@@ -506,8 +507,9 @@ int triangles() {
 
     //索引点线
     GLuint indices[] = { // 注意索引从0开始!
-        0, 1, 3, // 第一个三角形
-        1, 2, 3,  // 第二个三角形
+        0, 1, 2, // 第一个三角形
+        3, 0, 2,  // 第二个三角形
+        3, 2, 1,  // 第二个三角形
     };
     
     //创建索引的缓存
@@ -525,7 +527,7 @@ int triangles() {
     
     
     
-    
+    //顶点缓存 vertex buffer object
     GLuint VBO;
     //创建缓存
     glGenBuffers(1, &VBO);
@@ -560,6 +562,7 @@ int triangles() {
 //    char *vertexShaderSource = tmpVertexShaderSource;
     
     // 解析着色器类型,
+    //函数把要编译的着色器对象作为第一个参数。第二参数指定了传递的源码字符串数量，这里只有一个。第三个参数是顶点着色器真正的源码，第四个参数我们先设置为NULL。
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
     glCompileShader(vertexShader);
     
@@ -674,7 +677,7 @@ int triangles() {
     glBindVertexArray(0);
     
     
-    //使用线性绘制模式
+    //使用线性绘制模式 //GL_FILL， GL_LINE
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     
     //游戏循环(Game Loop) 窗口可以一直接受事件 进行处理
@@ -695,12 +698,12 @@ int triangles() {
         glBindVertexArray(VAO);
         //
 //        glDrawArrays(GL_TRIANGLES, 0, 3);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        
+        //画9个点
+        glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 
         glBindVertexArray(0);
 
-     
-        
         glfwSwapBuffers(window);
     }
     
