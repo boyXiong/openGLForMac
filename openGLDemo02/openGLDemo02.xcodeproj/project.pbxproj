@@ -47,6 +47,8 @@
 		763E431828D4580600493FB4 /* libglfw.3.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libglfw.3.3.dylib; sourceTree = "<group>"; };
 		763E431A28D4581100493FB4 /* libgltools.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libgltools.a; sourceTree = "<group>"; };
 		763E431C28D4583D00493FB4 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		763E431E28D9BFC300493FB4 /* locationShaderTextrue.vs */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = locationShaderTextrue.vs; sourceTree = "<group>"; };
+		763E431F28D9BFC400493FB4 /* locationShaderTextrue.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = locationShaderTextrue.frag; sourceTree = "<group>"; };
 		EA1A36B1273CAFF5002A70FF /* shaderTextrue.vs */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = shaderTextrue.vs; sourceTree = "<group>"; };
 		EA1A36B2273CAFF5002A70FF /* shaderTextrue.frag */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = shaderTextrue.frag; sourceTree = "<group>"; };
 		EAB0EAEC27268F1900B4410B /* openGLDemo02 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = openGLDemo02; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -129,6 +131,8 @@
 		EAB0EB33272BE93D00B4410B /* vertexData */ = {
 			isa = PBXGroup;
 			children = (
+				763E431F28D9BFC400493FB4 /* locationShaderTextrue.frag */,
+				763E431E28D9BFC300493FB4 /* locationShaderTextrue.vs */,
 				EA1A36B2273CAFF5002A70FF /* shaderTextrue.frag */,
 				EA1A36B1273CAFF5002A70FF /* shaderTextrue.vs */,
 				EAB0EB34272BE95D00B4410B /* shader.vs */,
