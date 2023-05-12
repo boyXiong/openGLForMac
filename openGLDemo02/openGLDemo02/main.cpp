@@ -487,19 +487,21 @@ int useTmp3D() {
 //          glBindVertexArray(0);
            
            // Create transformations
-           // 一定要初始化
+           // 一定要初始化 不初始化 改变不了数据
            glm::mat4 model = glm::mat4(1.0f);
            glm::mat4 view = glm::mat4(1.0f);
            glm::mat4 projection = glm::mat4(1.0f);
+           
+           GLfloat rotateValue = glm::radians(45.0);
+           
            model = glm::rotate(model, 45.0f, glm::vec3(1.0f, 0.0f, 0.0f));
            view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-           projection = glm::perspective(45.0f, (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
+           projection = glm::perspective(rotateValue, (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
 //           projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
            // Get their uniform location
            GLint modelLoc = glGetUniformLocation(ourShader.Program, "model");
            GLint viewLoc = glGetUniformLocation(ourShader.Program, "view");
            GLint projLoc = glGetUniformLocation(ourShader.Program, "projection");
-
 
 
            // Pass them to the shaders
