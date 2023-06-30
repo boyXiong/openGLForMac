@@ -12,6 +12,7 @@ uniform mat4 transform;
 
 void main()
 {
+    //经典 mvp 模型转换
     gl_Position = projection * view * model * vec4(position, 1.0f);
 //    gl_Position = vec4(position, 1.0f);
 //    gl_Position = transform * vec4(position, 1.0f);
