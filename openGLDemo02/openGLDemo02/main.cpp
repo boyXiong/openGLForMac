@@ -54,6 +54,8 @@ int useReal3D();
 
 int useTmp3D();
 
+int useReal3DWithCamera();
+
 //按键回调函数接受一个GLFWwindow指针作为它的第一个参数；第二个整形参数用来表示按下的按键；action参数表示这个按键是被按下还是释放；最后一个整形参数表示是否有Ctrl、Shift、Alt、Super等按钮的操作。GLFW会在合适的时候调用它，并为各个参数传入适当的值。
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
@@ -74,7 +76,7 @@ int main() {
 //    glGenerateMipmap(GL_TEXTURE_2D);
     
     
-    useReal3D();
+    useReal3DWithCamera();
     //
 //    use3D();
 //    useTexture();
@@ -741,8 +743,16 @@ int useReal3D() {
     
         //定义多个立方体的坐标
     glm::vec3 cubePositions[] = {
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(2.0f, 5.0f, -15.0f)
+      glm::vec3( 0.0f,  0.0f,  0.0f),
+      glm::vec3( 2.0f,  5.0f, -15.0f),
+      glm::vec3(-1.5f, -2.2f, -2.5f),
+      glm::vec3(-3.8f, -2.0f, -12.3f),
+      glm::vec3( 2.4f, -0.4f, -3.5f),
+      glm::vec3(-1.7f,  3.0f, -7.5f),
+      glm::vec3( 1.3f, -2.0f, -2.5f),
+      glm::vec3( 1.5f,  2.0f, -2.5f),
+      glm::vec3( 1.5f,  0.2f, -1.5f),
+      glm::vec3(-1.3f,  1.0f, -1.5f)
     };
 
        // Game loop
@@ -823,10 +833,11 @@ int useReal3D() {
            //通过这个方法可以绘制很多 顶点数据（imagine the mode is like picture and  just  copy more picture, just draw more vertex
            //因为单个纹理缓存 加 模型数据有了，那么一次给 GPU 的时候，告诉它绘制很多个就可以了
            //because a single texture cache loaded and model data are available, when you give it to the GPU at once, tell it to draw many of them.
-           for (GLuint i = 0; i < 2; ++i) {
-//               glm::mat4 model = glm::mat4(1.0f);
+           for (GLuint i = 0; i < 10; ++i) {
+               glm::mat4 model = glm::mat4(1.0f);
+               //转换为对应的坐标
                model = glm::translate(model, cubePositions[i]);
-               GLfloat angle = 20.0f * i ;
+               GLfloat angle = 20.0f * i + willRotate ;
                model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
                glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -850,6 +861,333 @@ int useReal3D() {
        glfwTerminate();
        return 0;
     
+}
+
+
+int useReal3DWithCamera() {
+    
+    //初始化 glfw 窗口
+    glfwInit();
+    
+    // 进行窗口配置
+    // MAJOR 主版本 设置为 3
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    // MINOR 此版本 设置为 3
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    // profile 使用的平台核心 是 core_profile
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // 是否可以 resizeable 设置大小 调整大小
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+    
+    // forward_compat  置顶 mac_ox 需要这句
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    printf("start");
+    
+    //创建窗口 宽 高  标题
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", nullptr, nullptr);
+    
+    //窗口如果等于 空指针
+    if (window == nullptr)
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        //关掉窗口
+        glfwTerminate();
+        return -1;
+    }
+    
+    //创建完窗口我们就可以通知GLFW将我们窗口的上下文设置为当前 线程 的主上下文了。
+    glfwMakeContextCurrent(window);
+    
+    //glew 实验性的
+    glewExperimental = GL_TRUE;
+    //初始化  glew
+    if (glewInit() != GLEW_OK)
+    {
+        printf( "Failed to initialize GLEW");
+        return -1;
+    }
+    
+//    int Width, Height;
+//    // 获取 window 对应的 宽 高
+//    //直接从GLFW中获取的。我们从GLFW中获取视口的维度而不设置为800*600是为了让它在高DPI的屏幕上（比如说Apple的视网膜显示屏
+//    glfwGetFramebufferSize(window, &Width, &Height);
+//
+//    std::cout << "width: " << Width << " height :" << Height << std::endl;
+//    //前2个是用来控制窗口左下角 渲染宽高,
+//    glViewport(0, 0, Width, Height);
+    
+    
+    // Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
+//    glewExperimental = GL_TRUE;
+//
+//// Initialize GLEW to setup the OpenGL Function pointers
+//   glewInit();
+
+   // Define the viewport dimensions
+    //渲染的大小 位置
+   glViewport(0, 0, WIDTH, HEIGHT);
+    
+    Shader ourShader("/Users/xizi/Documents/Code/OpenGL/openGLForMac/openGLDemo02/openGLDemo02/vertexData/locationShaderTextrue.vs", "/Users/xizi/Documents/Code/OpenGL/openGLForMac/openGLDemo02/openGLDemo02/vertexData/locationShaderTextrue.frag");
+    
+    
+    // Set up vertex data (and buffer(s)) and attribute pointers
+//       GLfloat vertices[] = {
+//           // Positions          // Texture Coords
+//            0.5f,  0.5f, 0.0f,   1.0f, 1.0f, // Top Right
+//            0.5f, -0.5f, 0.0f,   1.0f, 0.0f, // Bottom Right
+//           -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, // Bottom Left
+//           -0.5f,  0.5f, 0.0f,   0.0f, 1.0f  // Top Left
+//       };
+    
+    
+    GLfloat vertices[] = {
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+    };
+    
+    
+       GLuint indices[] = {  // Note that we start from 0!
+           0, 1, 3, // First Triangle
+           1, 2, 3  // Second Triangle
+       };
+    
+    
+       GLuint VBO, VAO, EBO;
+        //创建顶点数组
+       glGenVertexArrays(1, &VAO);
+        //创建顶点缓存对象
+       glGenBuffers(1, &VBO);
+        //创建elemnt
+       glGenBuffers(1, &EBO);
+        //绑定顶点数据数组
+       glBindVertexArray(VAO);
+        //绑定数组缓存
+       glBindBuffer(GL_ARRAY_BUFFER, VBO);
+       glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+       glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+       // Position attribute
+       glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+       glEnableVertexAttribArray(0);
+       // TexCoord attribute
+       glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+       glEnableVertexAttribArray(2);
+
+       glBindVertexArray(0); // Unbind VAO
+
+       //纹理载入
+       // Load and create a texture
+       GLuint texture1;
+       GLuint texture2;
+       // ====================
+       // Texture 1
+       // ====================
+       glGenTextures(1, &texture1);
+       glBindTexture(GL_TEXTURE_2D, texture1); // All upcoming GL_TEXTURE_2D operations now have effect on our texture object
+       // Set our texture parameters
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);    // Set texture wrapping to GL_REPEAT
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+       // Set texture filtering
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+       // Load, create texture and generate mipmaps
+       int width, height;
+       unsigned char* image = SOIL_load_image("/Users/xizi/Documents/Code/OpenGL/container.png", &width, &height, 0, SOIL_LOAD_RGB);
+       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+       glGenerateMipmap(GL_TEXTURE_2D);
+       SOIL_free_image_data(image);
+       glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture when done, so we won't accidentily mess up our texture.
+       // ===================
+       // Texture 2
+       // ===================
+       glGenTextures(1, &texture2);
+       glBindTexture(GL_TEXTURE_2D, texture2);
+       // Set our texture parameters
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+       // Set texture filtering
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+       // Load, create texture and generate mipmaps container
+       image = SOIL_load_image("/Users/xizi/Documents/Code/OpenGL/awesomeface.png", &width, &height, 0, SOIL_LOAD_RGB);
+       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+       glGenerateMipmap(GL_TEXTURE_2D);
+       SOIL_free_image_data(image);
+       glBindTexture(GL_TEXTURE_2D, 0);
+
+
+    GLfloat willRotate = 1.0f;
+    GLfloat willRotate2 = 1.0f;
+
+        //开启深度测试，用于 Z 值，深度测试渲染三角，如果已经有了，就不覆盖
+        glEnable(GL_DEPTH_TEST);
+    
+        //定义多个立方体的坐标
+    glm::vec3 cubePositions[] = {
+      glm::vec3( 0.0f,  0.0f,  0.0f),
+      glm::vec3( 2.0f,  5.0f, -15.0f),
+      glm::vec3(-1.5f, -2.2f, -2.5f),
+      glm::vec3(-3.8f, -2.0f, -12.3f),
+      glm::vec3( 2.4f, -0.4f, -3.5f),
+      glm::vec3(-1.7f,  3.0f, -7.5f),
+      glm::vec3( 1.3f, -2.0f, -2.5f),
+      glm::vec3( 1.5f,  2.0f, -2.5f),
+      glm::vec3( 1.5f,  0.2f, -1.5f),
+      glm::vec3(-1.3f,  1.0f, -1.5f)
+    };
+
+       // Game loop
+       while (!glfwWindowShouldClose(window))
+       {
+           // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
+           glfwPollEvents();
+
+           // Render
+           // Clear the color buffer
+           glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+           // Bind Textures using texture units
+           glActiveTexture(GL_TEXTURE0);
+           glBindTexture(GL_TEXTURE_2D, texture1);
+           glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture1"), 0);
+           // 启动那个空间 位置 属性 GL_TEXTURE_2D ，绑定对应的 值，一共有 31个可用
+           glActiveTexture(GL_TEXTURE31);
+           glBindTexture(GL_TEXTURE_2D, texture2);
+           glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture2"), 31);
+
+           // Activate shader
+           ourShader.Use();
+           
+           // Create transformations
+           //
+//          glm::mat4 transform = glm::mat4(1.0f);
+//           GLfloat rotaeValue = (GLfloat)glfwGetTime() * 50.0f;
+//          transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
+//          transform = glm::rotate(transform, rotaeValue, glm::vec3(0.0f, 0.0f, 1.0f));
+//         std::cout << "loop:" << rotaeValue << std::endl;
+//          // Get matrix's uniform location and set matrix
+//          GLint transformLoc = glGetUniformLocation(ourShader.Program, "transform");
+//          glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
+//
+//          // Draw container
+//          glBindVertexArray(VAO);
+//          glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+//          glBindVertexArray(0);
+           
+           // Create transformations
+           // 一定要初始化 不初始化 改变不了数据
+           glm::mat4 model = glm::mat4(1.0f);
+           
+           GLfloat radius = 10.0f;
+           GLfloat camX = sin(glfwGetTime()) * radius;
+           GLfloat camZ = cos(glfwGetTime()) * radius;
+           glm::mat4 view = glm::mat4(1.0f);
+           
+           
+           glm::mat4 projection = glm::mat4(1.0f);
+           
+           GLfloat rotateValue = glm::radians(45.0);
+           // glm::vec3(1.0f, 1.0f, 1.0f) 对应 变换 x, y ,z 坐标， 0 就不变换
+           model = glm::rotate(model, willRotate, glm::vec3(1.0f, 1.0f, 1.0f));
+           
+           model = glm::rotate(model, willRotate2, glm::vec3(1.0f, 0.0f, 1.0f));
+
+           //根据摄影机移动
+           view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+
+           //放大缩小
+           projection = glm::perspective(rotateValue, (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
+           
+//           projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
+           // Get their uniform location
+           GLint modelLoc = glGetUniformLocation(ourShader.Program, "model");
+           GLint viewLoc = glGetUniformLocation(ourShader.Program, "view");
+           GLint projLoc = glGetUniformLocation(ourShader.Program, "projection");
+
+
+           // Pass them to the shaders
+           glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+           glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+           // Note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
+           glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+           std::cout << "loop" << std::endl;
+           willRotate+= 0.01;
+           willRotate2 += 0.02;
+           // Draw container
+           glBindVertexArray(VAO);
+           
+       
+           //通过这个方法可以绘制很多 顶点数据（imagine the mode is like picture and  just  copy more picture, just draw more vertex
+           //因为单个纹理缓存 加 模型数据有了，那么一次给 GPU 的时候，告诉它绘制很多个就可以了
+           //because a single texture cache loaded and model data are available, when you give it to the GPU at once, tell it to draw many of them.
+           for (GLuint i = 0; i < 10; ++i) {
+               glm::mat4 model = glm::mat4(1.0f);
+               //转换为对应的坐标
+               model = glm::translate(model, cubePositions[i]);
+               GLfloat angle = 20.0f * i + willRotate ;
+               model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+               glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+               glDrawArrays(GL_TRIANGLES, 0, 36);
+
+           }
+           
+           //画3角
+//           glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+           //一次绘制36个顶点 直接绘制 顶点vertices
+           glBindVertexArray(0);
+           // Swap the screen buffers
+           glfwSwapBuffers(window);
+       }
+       // Properly de-allocate all resources once they've outlived their purpose
+       glDeleteVertexArrays(1, &VAO);
+       glDeleteBuffers(1, &VBO);
+       glDeleteBuffers(1, &EBO);
+       // Terminate GLFW, clearing any resources allocated by GLFW.
+       glfwTerminate();
+       return 0;
 }
 
 
