@@ -19,8 +19,45 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-
 const GLuint WIDTH = 800, HEIGHT = 600;
+
+//因为图形的渲染时间不一致 每个显卡，所以每一帧的渲染时间要计算出来
+GLfloat deltaTime = 0.0f;
+GLfloat lastFrame = 0.0f;
+GLfloat fov   =  45.0f;
+
+//定义摄像机坐标点
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 tmpCameraUp    = glm::vec3(0.0f, 10.0f, 0.0f);
+
+bool keyPressFlag[1024] = {0};
+
+//鼠标回调函数
+/*
+ 在处理FPS风格的摄像机鼠标输入的时候，我们必须在获取最终的方向向量之前做下面这几步：
+ 1.计算鼠标和上一帧的偏移量。
+ 2.把偏移量添加到摄像机和俯仰角和偏航角中。
+ 3.对偏航角和俯仰角进行最大和最小值的限制。
+ 4.计算方向向量。
+ */
+
+
+float yaw   = -90.0f;    // yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+float pitch =  0.0f;
+float lastX =  800.0f / 2.0;
+float lastY =  600.0 / 2.0;
+bool firstMouse = true;
+
+float lastMouseY = HEIGHT * 0.5;
+float lastMouseX = WIDTH * 0.5;
+bool IsMoveUp = false;
+float moveUpOffset = 0.0;
+
+bool IsOpenMirror = false;
+
+
 //顶点着色器源码  一般使用常量
 //const GLchar* vertexShaderSource = "#version 330 core\n"
 //    "layout (location = 0) in vec3 position;\n"
@@ -57,8 +94,11 @@ int useTmp3D();
 int useReal3DWithCamera();
 
 //按键回调函数接受一个GLFWwindow指针作为它的第一个参数；第二个整形参数用来表示按下的按键；action参数表示这个按键是被按下还是释放；最后一个整形参数表示是否有Ctrl、Shift、Alt、Super等按钮的操作。GLFW会在合适的时候调用它，并为各个参数传入适当的值。
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
-{
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
+    
+    
+   
+    keyPressFlag[key] = action;
     
     printf("key:%d, scancode:%d, action:%d, mode:%d", key, scancode, action, mode);
     // 当用户按下ESC键,我们设置window窗口的WindowShouldClose属性为true
@@ -67,15 +107,94 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
+void mouse_clickCallBack(GLFWwindow* window, int button, int action, int mods){
+    
+    std::cout << "button:" << button << " action:" << action << " mods:" << mods << std::endl;
+    
+    if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+        IsOpenMirror = !IsOpenMirror;
+        fov = IsOpenMirror ? 20.0f : 45.0f;
+    }
+}
+
+
+
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f; // change this value to your liking
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    // make sure that when pitch is out of bounds, screen doesn't get flipped
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+    
+}
+
+
+
+
+#pragma mark - 键盘移动计算 角度
+void do_movement() {
+    
+    GLfloat cameraSpeed = 5.0f * deltaTime;
+    if (keyPressFlag[GLFW_KEY_W]) {
+        cameraPos += cameraSpeed * cameraFront;
+    }else if (keyPressFlag[ GLFW_KEY_S]) {
+        cameraPos -= cameraSpeed * cameraFront;
+    }else if (keyPressFlag[GLFW_KEY_A]) {
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    }else if (keyPressFlag[GLFW_KEY_D]) {
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    }else if (keyPressFlag[GLFW_KEY_SPACE]) {
+        //跳起来
+//        cameraFront += glm::vec3(0.0, 0.01, 0.0);
+//        cameraPos = cameraPos * cameraUp;
+//        cameraUp += cameraSpeed;
+    }
+    IsMoveUp = keyPressFlag[GLFW_KEY_SPACE];
+}
+#pragma mark - 鼠标滑轮滚动大小
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    fov -= (float)yoffset;
+    if (fov < 1.0f)
+        fov = 1.0f;
+    if (fov > 45.0f)
+        fov = 45.0f;
+}
+
+
 
 int main() {
-    
-  
 
 //    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 //    glGenerateMipmap(GL_TEXTURE_2D);
-    
-    
     useReal3DWithCamera();
     //
 //    use3D();
@@ -83,10 +202,7 @@ int main() {
 
 //    train1();
 //    triangles();
-    
     return 0;
-
-    
 }
 
 int use3D() {
@@ -105,11 +221,12 @@ int use3D() {
     glfwWindowHint(GLFW_RESIZABLE, GL_TRUE);
     
     // forward_compat  置顶 mac_ox 需要这句
+#ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    printf("start");
+#endif    printf("start");
     
     //创建窗口 宽 高  标题
-    GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "LearnOpenGL", nullptr, nullptr);
     
     //窗口如果等于 空指针
     if (window == nullptr)
@@ -200,7 +317,8 @@ int use3D() {
     //载入 创建 textrue ， load and create a textrue
     GLuint texture1;
     GLuint texture2;
-    
+    GLuint texture3;
+
     //Texture1
     //生成
     glGenTextures(1, &texture1);
@@ -907,25 +1025,20 @@ int useReal3DWithCamera() {
         return -1;
     }
     
-//    int Width, Height;
-//    // 获取 window 对应的 宽 高
-//    //直接从GLFW中获取的。我们从GLFW中获取视口的维度而不设置为800*600是为了让它在高DPI的屏幕上（比如说Apple的视网膜显示屏
-//    glfwGetFramebufferSize(window, &Width, &Height);
-//
-//    std::cout << "width: " << Width << " height :" << Height << std::endl;
-//    //前2个是用来控制窗口左下角 渲染宽高,
-//    glViewport(0, 0, Width, Height);
+    //开启深度测试，用于 Z 值，深度测试渲染三角，如果已经有了，就不覆盖
+    glEnable(GL_DEPTH_TEST);
     
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetMouseButtonCallback(window, mouse_clickCallBack);
+    //鼠标缩放监听
+    glfwSetScrollCallback(window, scroll_callback);
+    //鼠标配置 首先我们要告诉GLFW，应该隐藏光标，并捕捉(Capture)它。捕捉鼠标意味着当应用集中焦点到鼠标上的时候光标就应该留在窗口中(除非应用拾取焦点或退出)。我们可以进行简单的配置:
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     
-    // Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
-//    glewExperimental = GL_TRUE;
-//
-//// Initialize GLEW to setup the OpenGL Function pointers
-//   glewInit();
-
-   // Define the viewport dimensions
-    //渲染的大小 位置
-   glViewport(0, 0, WIDTH, HEIGHT);
+    // Define the viewport dimensions
+     //渲染的大小 位置
+    glViewport(0, 0, WIDTH, HEIGHT);
     
     Shader ourShader("/Users/xizi/Documents/Code/OpenGL/openGLForMac/openGLDemo02/openGLDemo02/vertexData/locationShaderTextrue.vs", "/Users/xizi/Documents/Code/OpenGL/openGLForMac/openGLDemo02/openGLDemo02/vertexData/locationShaderTextrue.frag");
     
@@ -938,7 +1051,6 @@ int useReal3DWithCamera() {
 //           -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, // Bottom Left
 //           -0.5f,  0.5f, 0.0f,   0.0f, 1.0f  // Top Left
 //       };
-    
     
     GLfloat vertices[] = {
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
@@ -981,9 +1093,36 @@ int useReal3DWithCamera() {
          0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
          0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
         -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        
+        //开镜的顶点数据
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
     };
     
+//    -1.0f,  1.0f, 0.0f,  0.0f, 0.0f,
+//     1.0f,  1.0f, 0.0f,  1.0f, 0.0f,
+//    -1.0f,  -1.0f, 0.0f, 0.0f, 1.0f,
+//    -1.0f,  -1.0f, 0.0f,  0.0f, 1.0f,
+//     1.0f,  -1.0f, 0.0f,  1.0f, 1.0f,
+//     1.0f,  1.0f, 0.0f,  1.0f, 0.0f
+    
+  
+    
+    
+    GLfloat openMirrorVertices[] =  {
+        -1.0f,  1.5f, 0.0f,  0.0f, 1.0f,
+         1.0f,  1.0f, 0.0f,  1.0f, 1.0f,
+        -1.0f,  -1.0f, 0.0f,  1.0f, 0.0f,
+        -1.0f,  -1.0f, 0.0f,  1.0f, 0.0f,
+         1.0f,  -1.0f, 0.0f,  0.0f, 0.0f,
+         1.0f,  1.0f, 0.0f,  0.0f, 1.0f
+        
+    };
     
        GLuint indices[] = {  // Note that we start from 0!
            0, 1, 3, // First Triangle
@@ -1020,6 +1159,8 @@ int useReal3DWithCamera() {
        // Load and create a texture
        GLuint texture1;
        GLuint texture2;
+       GLuint texture3;
+
        // ====================
        // Texture 1
        // ====================
@@ -1055,13 +1196,27 @@ int useReal3DWithCamera() {
        glGenerateMipmap(GL_TEXTURE_2D);
        SOIL_free_image_data(image);
        glBindTexture(GL_TEXTURE_2D, 0);
+    
+    //开镜纹理
+        glGenTextures(1, &texture3);
+        glBindTexture(GL_TEXTURE_2D, texture3);
+        // Set our texture parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        // Set texture filtering
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // Load, create texture and generate mipmaps
+        image = SOIL_load_image("/Users/xizi/Documents/Code/OpenGL/openMirror.png", &width, &height, 0, SOIL_LOAD_RGB);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        SOIL_free_image_data(image);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
 
     GLfloat willRotate = 1.0f;
     GLfloat willRotate2 = 1.0f;
 
-        //开启深度测试，用于 Z 值，深度测试渲染三角，如果已经有了，就不覆盖
-        glEnable(GL_DEPTH_TEST);
     
         //定义多个立方体的坐标
     glm::vec3 cubePositions[] = {
@@ -1076,110 +1231,125 @@ int useReal3DWithCamera() {
       glm::vec3( 1.5f,  0.2f, -1.5f),
       glm::vec3(-1.3f,  1.0f, -1.5f)
     };
+    
+    
+    
+    // Activate shader
+    //可以写在循环外面然后将 链接器的 纹理值与TEXTURE0 绑定
+    ourShader.Use();
+    glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture1"), 0);
+    glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture2"), 31);
+    glUniform1i(glGetUniformLocation(ourShader.Program, "openMirrorTexture3"), 20);
 
        // Game loop
        while (!glfwWindowShouldClose(window))
        {
+           //每一帧计算新值
+           GLfloat currentFrame = glfwGetTime();
+           deltaTime = currentFrame - lastFrame;
+           lastFrame = currentFrame;
+           
+        
            // Check if any events have been activated (key pressed, mouse moved etc.) and call corresponding response functions
-           glfwPollEvents();
+           
+           //按键
+           do_movement();
+           if (IsMoveUp) {
+               // deltaTime 相当于 fps 用于平滑
+               moveUpOffset += -10 * deltaTime * 0.5;
+           }else {
+               moveUpOffset = 0;
+           }
 
            // Render
-           // Clear the color buffer
+           // Clear t  he color buffer
            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
            // Bind Textures using texture units
            glActiveTexture(GL_TEXTURE0);
            glBindTexture(GL_TEXTURE_2D, texture1);
-           glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture1"), 0);
            // 启动那个空间 位置 属性 GL_TEXTURE_2D ，绑定对应的 值，一共有 31个可用
            glActiveTexture(GL_TEXTURE31);
            glBindTexture(GL_TEXTURE_2D, texture2);
-           glUniform1i(glGetUniformLocation(ourShader.Program, "ourTexture2"), 31);
-
-           // Activate shader
-           ourShader.Use();
            
-           // Create transformations
-           //
-//          glm::mat4 transform = glm::mat4(1.0f);
-//           GLfloat rotaeValue = (GLfloat)glfwGetTime() * 50.0f;
-//          transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
-//          transform = glm::rotate(transform, rotaeValue, glm::vec3(0.0f, 0.0f, 1.0f));
-//         std::cout << "loop:" << rotaeValue << std::endl;
-//          // Get matrix's uniform location and set matrix
-//          GLint transformLoc = glGetUniformLocation(ourShader.Program, "transform");
-//          glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
-//
-//          // Draw container
-//          glBindVertexArray(VAO);
-//          glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-//          glBindVertexArray(0);
+           //开镜纹理
+           glActiveTexture(GL_TEXTURE20);
+           glBindTexture(GL_TEXTURE_2D, texture3);
+           // activate shader
+           ourShader.Use();
+
            
            // Create transformations
            // 一定要初始化 不初始化 改变不了数据
            glm::mat4 model = glm::mat4(1.0f);
            
-           GLfloat radius = 10.0f;
-           GLfloat camX = sin(glfwGetTime()) * radius;
-           GLfloat camZ = cos(glfwGetTime()) * radius;
-           glm::mat4 view = glm::mat4(1.0f);
-           
-           
-           glm::mat4 projection = glm::mat4(1.0f);
-           
-           GLfloat rotateValue = glm::radians(45.0);
+//           glm::mat4 projection = glm::mat4(1.0f);
+           glm::mat4 projection = glm::perspective(glm::radians(fov), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+           glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
            // glm::vec3(1.0f, 1.0f, 1.0f) 对应 变换 x, y ,z 坐标， 0 就不变换
-           model = glm::rotate(model, willRotate, glm::vec3(1.0f, 1.0f, 1.0f));
-           
-           model = glm::rotate(model, willRotate2, glm::vec3(1.0f, 0.0f, 1.0f));
-
+//           model = glm::rotate(model, willRotate, glm::vec3(1.0f, 1.0f, 1.0f));
+//
+//           model = glm::rotate(model, willRotate2, glm::vec3(1.0f, 0.0f, 1.0f));
            //根据摄影机移动
-           view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 
            //放大缩小
-           projection = glm::perspective(rotateValue, (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.1f, 100.0f);
-           
 //           projection = glm::ortho(0.0f, 800.0f, 0.0f, 600.0f, 0.1f, 100.0f);
            // Get their uniform location
            GLint modelLoc = glGetUniformLocation(ourShader.Program, "model");
            GLint viewLoc = glGetUniformLocation(ourShader.Program, "view");
            GLint projLoc = glGetUniformLocation(ourShader.Program, "projection");
-
+           GLint isOpenMirrorFromCpuLoc = glGetUniformLocation(ourShader.Program, "isOpenMirrorFromCpu");
 
            // Pass them to the shaders
            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
            // Note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
            glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-           std::cout << "loop" << std::endl;
-           willRotate+= 0.01;
-           willRotate2 += 0.02;
+           glUniform1f(isOpenMirrorFromCpuLoc, IsOpenMirror ? 2.0f : 0.0f);
+           
+           
+//           std::cout << "loop" << std::endl;
+//           willRotate+= 0.01;
+//           willRotate2 += 0.02;
            // Draw container
            glBindVertexArray(VAO);
            
-       
            //通过这个方法可以绘制很多 顶点数据（imagine the mode is like picture and  just  copy more picture, just draw more vertex
            //因为单个纹理缓存 加 模型数据有了，那么一次给 GPU 的时候，告诉它绘制很多个就可以了
            //because a single texture cache loaded and model data are available, when you give it to the GPU at once, tell it to draw many of them.
-           for (GLuint i = 0; i < 10; ++i) {
+           
+           if (IsOpenMirror) {
                glm::mat4 model = glm::mat4(1.0f);
                //转换为对应的坐标
-               model = glm::translate(model, cubePositions[i]);
-               GLfloat angle = 20.0f * i + willRotate ;
-               model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+               glm::vec3 moveUp = glm::vec3(0.0, moveUpOffset, 0.0) ;
+               model = glm::translate(model, moveUp + cubePositions[0]);
                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-               glDrawArrays(GL_TRIANGLES, 0, 36);
-
+               glDrawArrays(GL_TRIANGLES, 36, 6);
+           }else {
+               for (GLuint i = 0; i < 10; ++i) {
+                   glm::mat4 model = glm::mat4(1.0f);
+                   //转换为对应的坐标
+                   glm::vec3 moveUp = glm::vec3(0.0, moveUpOffset, 0.0) ;
+                   
+                   model = glm::translate(model, moveUp + cubePositions[i]);
+                   
+    //               GLfloat angle = 20.0f * i + willRotate ;
+    //               model = glm::rotate(model, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+                   glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+                   glDrawArrays(GL_TRIANGLES, 0, 36);
+               }
            }
            
+          
            //画3角
 //           glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
            //一次绘制36个顶点 直接绘制 顶点vertices
            glBindVertexArray(0);
            // Swap the screen buffers
            glfwSwapBuffers(window);
+           glfwPollEvents();
+
        }
        // Properly de-allocate all resources once they've outlived their purpose
        glDeleteVertexArrays(1, &VAO);
